@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d9480f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Control de Filamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: pantalla de consola. Barra superior con acciones, carrusel de carretes al centro, panel de uso debajo, menú lateral a la derecha. */
+:root {
+  --bg: #eceff0;
+  --surface: #f9fafa;
+  --surface-2: #e2e6e8;
+  --ink: #15191c;
+  --ink-2: #566068;
+  --line: #cdd3d6;
+  --accent: #d9480f;
+  --accent-ink: #ffffff;
+  --scrim: rgba(21, 25, 28, 0.45);
+  --ok: #1f7a4d;
+  --ok-bg: #dcefe4;
+  --warn: #8a5a00;
+  --warn-bg: #f7e6bd;
+  --crit: #b42318;
+  --crit-bg: #f9d9d5;
+  --empty: #5b6670;
+  --empty-bg: #dde1e4;
+  --flange: #c3cacd;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181b; --surface: #1c2125; --surface-2: #262c31; --ink: #eceff0; --ink-2: #9aa5ac;
+    --line: #333b41; --accent: #ff7a3d; --accent-ink: #1a0d05; --scrim: rgba(0, 0, 0, 0.6);
+    --ok: #5fd39a; --ok-bg: #173a2a; --warn: #f1c25a; --warn-bg: #3c2f10;
+    --crit: #ff8a7d; --crit-bg: #47201c; --empty: #9aa5ac; --empty-bg: #2a3036; --flange: #3a444b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181b; --surface: #1c2125; --surface-2: #262c31; --ink: #eceff0; --ink-2: #9aa5ac;
+  --line: #333b41; --accent: #ff7a3d; --accent-ink: #1a0d05; --scrim: rgba(0, 0, 0, 0.6);
+  --ok: #5fd39a; --ok-bg: #173a2a; --warn: #f1c25a; --warn-bg: #3c2f10;
+  --crit: #ff8a7d; --crit-bg: #47201c; --empty: #9aa5ac; --empty-bg: #2a3036; --flange: #3a444b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1000px; margin-inline: auto; display: flex; flex-direction: column; gap: 8px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: 26px; line-height: 1.1; }
+h2 { font-size: 20px; }
+h3 { font-size: 18px; font-weight: 600; }
+h4 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 600; }
+p { margin: 0; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+button, input, select { font: inherit; color: inherit; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.small { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.btn.danger[data-armed="1"] { background: var(--crit); border-color: var(--crit); color: var(--bg); }
+.btn[disabled] { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-height: 40px; width: 100%; }
+input[type="color"] { padding: 2px; width: 56px; cursor: pointer; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.05em; }
+label input, label select { text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--ink); font-weight: 400; }
+.filebtn { flex-direction: row; align-items: center; justify-content: center; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--ink); width: fit-content; }
+.filebtn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filebtn { position: relative; cursor: pointer; }
+.vh { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; opacity: 0; cursor: pointer; padding: 0; border: 0; font-size: 0; }
+.dbg { font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); padding: 8px; border-radius: 6px; margin: 0; max-height: 150px; overflow: auto; user-select: all; }
+
+/* Barra superior */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.menu-btn { position: relative; width: 44px; padding: 0; display: grid; place-items: center; }
+.menu-btn svg { display: block; }
+.menu-btn .count { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--crit); color: var(--bg); font-size: 12px; font-weight: 600; display: grid; place-items: center; }
+
+/* Carrusel */
+.rail-wrap { position: relative; }
+.rail {
+  position: relative; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  padding: 36px calc(50% - 115px) 30px; outline-offset: -2px; border-radius: 8px;
+}
+.rail::-webkit-scrollbar { display: none; }
+.card {
+  flex: 0 0 230px; scroll-snap-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; cursor: pointer;
+  transform: scale(var(--s, 1)); opacity: var(--o, 1); transform-origin: center bottom; user-select: none; -webkit-user-select: none;
+}
+.card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 14px 28px -14px rgba(0, 0, 0, 0.45); }
+.card h3 { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
+.card .big { font-family: var(--font-mono); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1; }
+.card .big small { font-size: 14px; color: var(--ink-2); }
+.card .bar { width: 100%; }
+.badge { font-family: var(--font-body); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; background: var(--accent); color: var(--accent-ink); }
+.badge.ghost { background: var(--surface-2); color: var(--ink-2); }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; background: var(--ok); }
+.bar.st-low i { background: var(--warn); }
+.bar.st-crit i { background: var(--crit); }
+.bar.st-empty i { background: var(--empty); }
+.chip { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+.chip.st-ok { background: var(--ok-bg); color: var(--ok); }
+.chip.st-low { background: var(--warn-bg); color: var(--warn); }
+.chip.st-crit { background: var(--crit-bg); color: var(--crit); }
+.chip.st-empty { background: var(--empty-bg); color: var(--empty); }
+.arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; padding: 0; display: grid; place-items: center; z-index: 2; }
+.arrow.prev { left: 0; }
+.arrow.next { right: 0; }
+.dots { display: flex; justify-content: center; gap: 6px; min-height: 8px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--accent); width: 18px; border-radius: 4px; }
+.hint { color: var(--ink-2); font-size: 13px; text-align: center; margin-top: 4px; }
+.empty { margin: 0 auto; max-width: 420px; padding: 56px 8px; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+/* Panel de uso */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; margin-top: 10px; max-width: 560px; width: 100%; margin-inline: auto; }
+.det-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.det-head .nums { font-size: 13px; color: var(--ink-2); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.form-grid .full { grid-column: 1 / -1; }
+.adj { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; padding-top: 12px; border-top: 1px solid var(--line); }
+.adj + .adj { border-top: 0; padding-top: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.file-box { display: flex; flex-direction: column; gap: 8px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chipbtn { border: 1px solid var(--accent); background: transparent; color: var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; min-height: 30px; font-family: var(--font-mono); }
+.chipbtn:hover { background: var(--surface-2); }
+
+/* Menú lateral */
+#scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
+#drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); z-index: 31; background: var(--bg); border-left: 1px solid var(--line);
+  transform: translateX(100%); visibility: hidden; transition: transform .2s ease, visibility .2s; overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 16px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+#drawer.open { transform: none; visibility: visible; }
+.dr-head { display: flex; align-items: center; gap: 8px; }
+.dr-head h2 { flex: 1; }
+.nav { display: flex; flex-direction: column; gap: 8px; }
+.nav button { text-align: left; padding: 14px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.nav button:hover { background: var(--surface-2); }
+.nav b { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.nav span { color: var(--ink-2); font-size: 13px; }
+.view { display: flex; flex-direction: column; gap: 12px; }
+.res { display: flex; flex-direction: column; }
+.res-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.res-row:first-child { border-top: 0; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); }
+.res-row .name { font-weight: 500; overflow-wrap: anywhere; }
+.res-row .detail { grid-column: 2 / -1; font-size: 13px; color: var(--ink-2); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.list .what { overflow-wrap: anywhere; }
+.list .when { font-size: 12px; color: var(--ink-2); }
+.list .empty-li { display: block; color: var(--ink-2); font-size: 13px; }
+.list li.done .what { text-decoration: line-through; color: var(--ink-2); }
+.sug { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.sug + .sug { margin-top: 8px; }
+.thresh-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.thresh-row input { width: 76px; font-family: var(--font-mono); }
+#status { font-size: 12px; color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile .k { font-size: 12px; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.05em; }
+.tile .v { font-family: var(--font-mono); font-size: 19px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tile .s { font-size: 12px; color: var(--ink-2); }
+.mrow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.mrow .bar { height: 10px; }
+.mrow .bar i { background: var(--accent); }
+
+/* Formulario de carrete */
+#formModal { position: fixed; z-index: 32; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+#formModal .form-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 12px; }
+.form-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 6px; font-size: 14px; max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 40; }
+#toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast, #drawer { transition: none; } }
+@media (max-width: 520px) { .arrow { display: none; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Control de Filamento</h1>
+    <div class="top-actions">
+      <button class="btn" id="exBtn" type="button" data-act="examples">Cargar ejemplos</button>
+      <button class="btn primary" id="addBtn" type="button" data-act="openForm">Agregar carrete</button>
+      <button class="btn menu-btn" id="menuBtn" type="button" data-act="openMenu" aria-label="Abrir menú" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+        <span class="count" id="menuCount" hidden></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="rail-wrap">
+      <button class="btn arrow prev" type="button" data-act="prev" aria-label="Carrete anterior">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3 5 9l6 6"/></svg>
+      </button>
+      <div class="rail" id="rail" tabindex="0" role="listbox" aria-label="Carretes. Usa las flechas del teclado o desliza."></div>
+      <button class="btn arrow next" type="button" data-act="next" aria-label="Carrete siguiente">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 3 6 6-6 6"/></svg>
+      </button>
+    </div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <p class="hint" id="railHint"></p>
+
+    <section class="panel" id="detail" hidden aria-labelledby="detTitle">
+      <div class="det-head" id="detHead"></div>
+      <div class="file-box">
+        <div class="row">
+          <label class="btn small filebtn">Leer archivo del slicer<input id="useFile" class="vh" type="file"></label>
+          <span class="sub" id="useFileInfo"></span>
+        </div>
+        <div class="chips" id="useChips"></div>
+        <pre class="dbg" id="useDbg" hidden></pre>
+      </div>
+      <form id="useForm" class="form-grid">
+        <label>Gramos usados<input id="useG" type="number" inputmode="decimal" min="0.1" step="0.1" required placeholder="35"></label>
+        <label>Impresión<input id="useLabel" placeholder="Soporte de celular" maxlength="60"></label>
+        <p class="sub full" id="useCost"></p>
+        <button class="btn primary full" type="submit">Registrar uso y descontar</button>
+      </form>
+      <div class="adj">
+        <label>Peso real en balanza (g)<input id="realW" type="number" inputmode="decimal" min="0" step="1"></label>
+        <button class="btn" type="button" data-act="saveReal">Guardar peso</button>
+      </div>
+      <div class="adj">
+        <label>Precio del carrete (<span class="cur">Q</span>)<input id="realP" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Opcional"></label>
+        <button class="btn" type="button" data-act="savePrice">Guardar precio</button>
+      </div>
+      <div class="row">
+        <button class="btn small" type="button" data-act="setActive" id="activeBtn">Usar este en la impresora</button>
+        <button class="btn small danger" type="button" data-act="delete" id="delBtn">Borrar carrete</button>
+        <button class="btn small" type="button" data-act="closeDetail">Cerrar</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="scrim" hidden data-act="closeAll"></div>
+
+<aside id="drawer" aria-hidden="true" aria-label="Menú">
+  <div class="dr-head">
+    <button class="btn small" type="button" id="drBack" data-act="menuHome" hidden aria-label="Volver al menú">←</button>
+    <h2 id="drTitle">Menú</h2>
+    <button class="btn small" type="button" data-act="closeAll">Cerrar</button>
+  </div>
+
+  <nav class="nav" id="drNav">
+    <button type="button" data-view="check"><b>¿Alcanza el modelo?</b><span>Carga el archivo del slicer y compara con tus carretes</span></button>
+    <button type="button" data-view="shop"><b>Lista de compra</b><span id="shopNav">Qué reponer</span></button>
+    <button type="button" data-view="stats"><b>Resumen</b><span>Inventario, consumo y gasto</span></button>
+    <button type="button" data-view="hist"><b>Historial</b><span id="histCount">Últimas impresiones registradas</span></button>
+    <button type="button" data-view="set"><b>Ajustes</b><span>Avisos, moneda y copia de seguridad</span></button>
+  </nav>
+
+  <section class="view" id="v-check" hidden>
+    <div class="file-box">
+      <label class="btn filebtn">Cargar archivo del slicer<input id="chkFile" class="vh" type="file"></label>
+      <p class="sub" id="chkFileInfo"></p>
+      <div class="chips" id="chkChips"></div>
+      <pre class="dbg" id="chkDbg" hidden></pre>
+    </div>
+    <p class="hint" style="text-align:left">También puedes escribir el consumo a mano. El margen cubre purga, soportes y fallos.</p>
+    <form id="chkForm" class="form-grid">
+      <label>Consumo<input id="chkAmt" type="number" inputmode="decimal" min="0" step="0.1" placeholder="120"></label>
+      <label>Unidad<select id="chkUnit"><option value="g">gramos</option><option value="m">metros</option></select></label>
+      <label class="full">Margen de seguridad (%)<input id="chkMargin" type="number" inputmode="decimal" min="0" max="50" step="1" value="5"></label>
+    </form>
+    <div id="chkResult" class="res" aria-live="polite"></div>
+  </section>
+
+  <section class="view" id="v-shop" hidden>
+    <h4>Sugeridos</h4>
+    <div id="shopSug"></div>
+    <form id="shopForm" class="form-grid">
+      <label class="full">Agregar a la lista<input id="shopText" placeholder="PLA negro 1 kg" maxlength="80" required></label>
+      <label>Precio estimado<input id="shopPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Opcional"></label>
+      <button class="btn primary" type="submit" style="align-self:end">Agregar</button>
+    </form>
+    <h4>Por comprar</h4>
+    <ul class="list" id="shopList"></ul>
+    <p class="sub" id="shopTotal"></p>
+    <div class="row"><button class="btn small" type="button" id="shopClear" data-act="shopClear" hidden>Quitar comprados</button></div>
+  </section>
+
+  <section class="view" id="v-stats" hidden>
+    <div class="tiles" id="tiles"></div>
+    <h4>Consumo por material</h4>
+    <div id="byMat" class="view" style="gap:8px"></div>
+  </section>
+
+  <section class="view" id="v-hist" hidden>
+    <ul class="list" id="history"></ul>
+  </section>
+
+  <section class="view" id="v-set" hidden>
+    <label class="thresh-row" style="flex-direction:row;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink);font-size:14px">
+      Avisar cuando quede
+      <input id="lowPct" type="number" inputmode="numeric" min="5" max="60" step="1" value="20" aria-label="Porcentaje para avisar">
+      % o menos
+    </label>
+    <p class="sub">Con la mitad de ese porcentaje, el carrete pasa a "Casi vacío".</p>
+    <label class="thresh-row" style="flex-direction:row;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink);font-size:14px">
+      Símbolo de moneda
+      <input id="curSym" maxlength="4" value="Q" aria-label="Símbolo de moneda">
+    </label>
+    <div class="row" id="exportRow" hidden>
+      <button class="btn small" type="button" data-act="exportCsv">Descargar historial (CSV)</button>
+      <button class="btn small" type="button" data-act="exportJson">Copia de seguridad (JSON)</button>
+      <label class="btn small filebtn">Importar copia<input id="impFile" class="vh" type="file" accept=".json,application/json"></label>
+    </div>
+    <div class="row" id="impConfirm" hidden>
+      <span class="sub" id="impMsg"></span>
+      <button class="btn small danger" type="button" data-armed="1" id="impYes">Sí, reemplazar</button>
+      <button class="btn small" type="button" id="impNo">Cancelar</button>
+    </div>
+    <div class="row"><button class="btn small" type="button" id="clrEx" data-act="clearExamples" hidden>Quitar carretes de ejemplo</button></div>
+    <p id="status"></p>
+  </section>
+</aside>
+
+<form id="formModal" hidden>
+  <h2>Nuevo carrete</h2>
+  <div class="form-grid">
+    <label>Color o nombre<input id="fName" required placeholder="Negro mate" maxlength="40"></label>
+    <label>Marca<input id="fBrand" placeholder="Opcional" maxlength="40"></label>
+    <label>Material
+      <select id="fMat"><option>PLA</option><option>PETG</option><option>ABS</option><option>ASA</option><option>TPU</option><option>Nylon</option></select>
+    </label>
+    <label>Diámetro
+      <select id="fDia"><option value="1.75">1.75 mm</option><option value="2.85">2.85 mm</option></select>
+    </label>
+    <label>Peso inicial (g)<input id="fInit" type="number" inputmode="decimal" min="1" step="1" value="1000" required></label>
+    <label>Peso actual (g)<input id="fRem" type="number" inputmode="decimal" min="0" step="1" placeholder="Igual al inicial"></label>
+    <label>Precio del carrete (<span class="cur">Q</span>)<input id="fPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Opcional"></label>
+    <label>Color en pantalla<input id="fColor" type="color" value="#222222"></label>
+  </div>
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Guardar carrete</button>
+    <button class="btn" type="button" data-act="closeAll">Cancelar</button>
+  </div>
+</form>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const DENS = { PLA: 1.24, PETG: 1.27, ABS: 1.04, ASA: 1.07, TPU: 1.21, Nylon: 1.14 };
+const LS_KEY = "filamento3d-v1";
+const S = { spools: [], prints: [], shopping: [], settings: { lowPct: 20, activeId: null, currency: "Q" }, loaded: false, sel: null, open: false, file: null, fileErr: "", fileDbg: [] };
+let db = null;
+let dl = null;
+let toastTimer = null;
+let announced = false;
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const fmt = (n) => Math.round(n).toLocaleString("es");
+const fmt1 = (n) => n.toLocaleString("es", { maximumFractionDigits: 1 });
+const cur = () => S.settings.currency || "Q";
+const money = (n) => cur() + " " + n.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const newId = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const gPerM = (mat, dia) => (DENS[mat] || 1.24) * Math.PI * Math.pow(dia / 20, 2) * 100;
+const spoolName = (sp) => [sp.name, sp.brand].filter(Boolean).join(" · ");
+const byId = (id) => S.spools.find((x) => x.id === id);
+const costPerG = (sp) => (sp && sp.price > 0 && sp.initial > 0 ? sp.price / sp.initial : null);
+
+function toast(msg, ms = 2600) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+function stateOf(sp) {
+  const pct = sp.initial > 0 ? sp.remaining / sp.initial : 0;
+  const low = S.settings.lowPct / 100;
+  let key = "ok", label = "Bien";
+  if (sp.remaining <= 0) { key = "empty"; label = "Vacío"; }
+  else if (pct <= low / 2) { key = "crit"; label = "Casi vacío"; }
+  else if (pct <= low) { key = "low"; label = "Por acabarse"; }
+  return { key, label, pct: Math.max(0, Math.min(1, pct)) };
+}
+const sortedSpools = () => [...S.spools].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+/* ---------- Almacenamiento: db compartida o navegador ---------- */
+function lsLoad() {
+  try {
+    const j = JSON.parse(localStorage.getItem(LS_KEY));
+    if (j) { S.spools = j.spools || []; S.prints = j.prints || []; S.shopping = j.shopping || []; Object.assign(S.settings, j.settings || {}); }
+  } catch (e) {}
+}
+function lsSave() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ spools: S.spools, prints: S.prints, shopping: S.shopping, settings: S.settings })); } catch (e) {}
+}
+const bodyOf = (o) => { const { id, ...rest } = o; return rest; };
+
+async function putSpool(sp) {
+  if (db) return db.doc("spools/" + sp.id).set(bodyOf(sp));
+  const i = S.spools.findIndex((x) => x.id === sp.id);
+  if (i < 0) S.spools.push(sp); else S.spools[i] = sp;
+  lsSave(); render();
+}
+async function delSpool(id) {
+  if (db) return db.doc("spools/" + id).delete();
+  S.spools = S.spools.filter((x) => x.id !== id); lsSave(); render();
+}
+async function putPrint(p) {
+  if (db) return db.doc("prints/" + p.id).set(bodyOf(p));
+  S.prints.unshift(p); S.prints = S.prints.slice(0, 500); lsSave(); render();
+}
+async function delPrint(id) {
+  if (db) return db.doc("prints/" + id).delete();
+  S.prints = S.prints.filter((x) => x.id !== id); lsSave(); render();
+}
+async function putShop(it) {
+  if (db) return db.doc("shopping/" + it.id).set(bodyOf(it));
+  const i = S.shopping.findIndex((x) => x.id === it.id);
+  if (i < 0) S.shopping.push(it); else S.shopping[i] = it;
+  lsSave(); render();
+}
+async function delShop(id) {
+  if (db) return db.doc("shopping/" + id).delete();
+  S.shopping = S.shopping.filter((x) => x.id !== id); lsSave(); render();
+}
+async function putSettings(patch) {
+  Object.assign(S.settings, patch);
+  if (db) return db.doc("settings/main").set({ ...S.settings });
+  lsSave(); render();
+}
+async function guard(fn) {
+  try { await fn(); }
+  catch (e) { toast(e && e.code === "quota_exceeded" ? "Se llenó el almacenamiento. Borra datos viejos." : "No se pudo guardar. Intenta de nuevo."); }
+}
+
+/* ---------- Lectura del archivo del slicer ---------- */
+function parseSlicer(text) {
+  const list = (s) => s.split(/[,;\s]+/).map(parseFloat).filter((n) => isFinite(n));
+  let m, grams = null, meters = null, parts = [];
+  if ((m = text.match(/;\s*filament used\s*\[g\]\s*[:=]\s*([\d.,\s]+)/i))) parts = list(m[1]);
+  if ((m = text.match(/total filament weight\s*\[g\]\s*[:=]\s*([\d.]+)/i))) grams = parseFloat(m[1]);
+  else if ((m = text.match(/total filament used\s*\[g\]\s*[:=]\s*([\d.]+)/i))) grams = parseFloat(m[1]);
+  else if (parts.length) grams = parts.reduce((a, b) => a + b, 0);
+  else if ((m = text.match(/filament[^\r\n]{0,40}weight[^\r\n\d]{0,20}([\d.]+)\s*g\b/i))) grams = parseFloat(m[1]);
+  else if ((m = text.match(/(?:^|[\r\n;\s])(?:filament\s+)?(?:used|usage)[^\r\n\d]{0,12}([\d.]+)\s*g\b/i))) grams = parseFloat(m[1]);
+  if ((m = text.match(/;\s*filament used\s*\[mm\]\s*[:=]\s*([\d.,\s]+)/i))) meters = list(m[1]).reduce((a, b) => a + b, 0) / 1000;
+  else if ((m = text.match(/total filament length\s*\[mm\]\s*[:=]\s*([\d.]+)/i))) meters = parseFloat(m[1]) / 1000;
+  else if ((m = text.match(/filament used\s*[:=]\s*([\d.]+)\s*(mm|cm|m)\b/i))) meters = parseFloat(m[1]) / ({ mm: 1000, cm: 100, m: 1 }[m[2].toLowerCase()]);
+  return { grams: grams > 0 ? grams : null, meters: meters > 0 ? meters : null, parts: parts.length > 1 ? parts : [] };
+}
+async function readSlicerFile(file) {
+  const CH = 200000;
+  const text = file.size <= CH * 2 ? await file.text() : (await file.slice(0, CH).text()) + "\n" + (await file.slice(file.size - CH).text());
+  const r = parseSlicer(text);
+  r.name = file.name.replace(/\.[^.]+$/, "");
+  const lines = text.split(/\r?\n/);
+  let dbg = lines.filter((l) => /filament|weight|material|peso|used/i.test(l) && l.length < 160).slice(0, 8);
+  if (!dbg.length) dbg = lines.filter((l) => l.trim()).slice(0, 6).map((l) => l.slice(0, 100));
+  r.dbg = dbg;
+  return r;
+}
+async function loadSlicer(file, from) {
+  if (!file) return;
+  S.file = null; S.fileErr = `Leyendo ${file.name}…`; S.fileDbg = [];
+  renderFileInfo();
+  if (/\.3mf$/i.test(file.name)) { S.fileErr = "Los archivos .3mf no se pueden leer aquí. Exporta el .gcode."; renderFileInfo(); toast(S.fileErr, 4000); return; }
+  let r;
+  try { r = await readSlicerFile(file); } catch (e) { S.fileErr = "No se pudo leer el archivo. Vuelve a elegirlo."; renderFileInfo(); toast(S.fileErr, 4000); return; }
+  if (r.grams == null && r.meters == null) {
+    S.fileErr = `No encontré el consumo de filamento en ${file.name}. Estas son las líneas que vi; envíamelas para ajustar la lectura:`;
+    S.fileDbg = r.dbg;
+    renderFileInfo(); toast("No encontré el consumo en este archivo", 4000); return;
+  }
+  S.fileErr = "";
+  S.file = r;
+  const sp = byId(S.sel);
+  const g = r.grams != null ? r.grams : (sp ? r.meters * gPerM(sp.material, sp.diameter) : null);
+  if (from === "chk") {
+    if (r.grams != null) { $("#chkUnit").value = "g"; $("#chkAmt").value = (Math.round(r.grams * 10) / 10).toString(); }
+    else { $("#chkUnit").value = "m"; $("#chkAmt").value = (Math.round(r.meters * 10) / 10).toString(); }
+  } else if (g != null) {
+    $("#useG").value = (Math.round(g * 10) / 10).toString();
+    if (!$("#useLabel").value) $("#useLabel").value = r.name.slice(0, 60);
+  }
+  renderFileInfo(); renderCheck(); renderUseCost();
+  toast(`Leído: ${r.grams != null ? fmt1(r.grams) + " g" : fmt1(r.meters) + " m"}`);
+}
+function chipsHtml(r, sp, act) {
+  if (!r) return "";
+  const out = [];
+  const chip = (txt, g, m) => `<button type="button" class="chipbtn" data-act="${act}"${g != null ? ` data-g="${g.toFixed(1)}"` : ""}${m != null ? ` data-m="${m.toFixed(2)}"` : ""}>${txt}</button>`;
+  if (r.grams != null) {
+    out.push(chip(`Total ${fmt1(r.grams)} g`, r.grams, null));
+    if (r.parts.length > 1) r.parts.forEach((g, i) => out.push(chip(`Filamento ${i + 1}: ${fmt1(g)} g`, g, null)));
+  } else if (r.meters != null) {
+    out.push(chip(`${fmt1(r.meters)} m`, sp ? r.meters * gPerM(sp.material, sp.diameter) : null, r.meters));
+  }
+  return out.join("");
+}
+function renderFileInfo() {
+  const r = S.file;
+  let t = S.fileErr;
+  if (r) t = `${r.name}: ` + [r.grams != null ? fmt1(r.grams) + " g" : "", r.meters != null ? fmt1(r.meters) + " m" : "", r.parts.length > 1 ? r.parts.length + " filamentos" : ""].filter(Boolean).join(" · ");
+  $("#chkFileInfo").textContent = t;
+  $("#useFileInfo").textContent = t;
+  const dbg = !r && S.fileDbg.length ? S.fileDbg.join("\n") : "";
+  ["#chkDbg", "#useDbg"].forEach((s) => { $(s).hidden = !dbg; $(s).textContent = dbg; });
+  $("#chkChips").innerHTML = chipsHtml(r, null, "setChk");
+  $("#useChips").innerHTML = chipsHtml(r, byId(S.sel), "setUse");
+}
+
+/* ---------- Acciones de datos ---------- */
+async function logUse(spoolId, grams, label) {
+  const sp = byId(spoolId);
+  if (!sp) return;
+  const k = costPerG(sp);
+  await putSpool({ ...sp, remaining: Math.max(0, Math.round((sp.remaining - grams) * 10) / 10) });
+  await putPrint({ id: newId(), spoolId, spoolName: spoolName(sp), material: sp.material, grams, cost: k != null ? Math.round(grams * k * 100) / 100 : null, label: label || "", at: Date.now() });
+}
+async function undoPrint(p) {
+  const sp = byId(p.spoolId);
+  if (sp) await putSpool({ ...sp, remaining: Math.round((sp.remaining + p.grams) * 10) / 10 });
+  await delPrint(p.id);
+}
+async function loadExamples() {
+  const ex = [
+    { name: "Negro mate", brand: "Ejemplo", material: "PLA", diameter: 1.75, initial: 1000, remaining: 842, color: "#2a2a2c", price: 160 },
+    { name: "Naranja", brand: "Ejemplo", material: "PETG", diameter: 1.75, initial: 1000, remaining: 168, color: "#e8661c", price: 190 },
+    { name: "Azul", brand: "Ejemplo", material: "PLA", diameter: 1.75, initial: 1000, remaining: 54, color: "#2e63c9", price: 160 },
+  ];
+  const t = Date.now();
+  let first = null;
+  for (let i = 0; i < ex.length; i++) {
+    const sp = { ...ex[i], id: newId(), createdAt: t + i, example: true };
+    first = first || sp.id;
+    await putSpool(sp);
+  }
+  S.sel = S.sel || first;
+  if (!S.settings.activeId) await putSettings({ activeId: first });
+}
+async function clearExamples() {
+  const ids = S.spools.filter((s) => s.example).map((s) => s.id);
+  for (const id of ids) {
+    await delSpool(id);
+    if (S.settings.activeId === id) await putSettings({ activeId: null });
+  }
+  toast("Ejemplos quitados");
+}
+
+/* ---------- Dibujo ---------- */
+function spoolSvg(sp, pct, size) {
+  const r = 10 + 18 * Math.sqrt(pct);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="Carrete al ${Math.round(pct * 100)}%">
+    <circle cx="32" cy="32" r="30" fill="var(--flange)"/>
+    <circle cx="32" cy="32" r="${r.toFixed(1)}" fill="${esc(sp.color || "#888")}" stroke="var(--ink)" stroke-opacity=".35" stroke-width="1"/>
+    <circle cx="32" cy="32" r="9" fill="var(--surface)" stroke="var(--line)"/>
+    <circle cx="32" cy="32" r="3" fill="var(--flange)"/>
+  </svg>`;
+}
+
+/* ---------- Render ---------- */
+function renderTop() {
+  const lows = S.spools.filter((s) => stateOf(s).key !== "ok").length;
+  const c = $("#menuCount");
+  c.hidden = !lows;
+  c.textContent = lows;
+  $("#menuBtn").setAttribute("aria-label", lows ? `Abrir menú. ${lows} carretes por acabarse` : "Abrir menú");
+  $("#exBtn").hidden = S.spools.some((s) => s.example);
+  document.querySelectorAll(".cur").forEach((e) => { e.textContent = cur(); });
+}
+
+function renderRail() {
+  const rail = $("#rail");
+  const list = sortedSpools();
+  if (!S.loaded) { rail.innerHTML = `<div class="empty"><p class="sub">Cargando…</p></div>`; return; }
+  if (!list.length) {
+    rail.innerHTML = `<div class="empty"><h3>Aún no hay carretes</h3><p class="sub">Toca "Agregar carrete" para registrar el que tienes en la impresora, o carga unos de ejemplo para probar la app.</p></div>`;
+    $("#dots").innerHTML = ""; $("#railHint").textContent = ""; S.open = false; $("#detail").hidden = true;
+    return;
+  }
+  if (!byId(S.sel)) S.sel = byId(S.settings.activeId) ? S.settings.activeId : list[0].id;
+  rail.innerHTML = list.map((sp) => {
+    const st = stateOf(sp);
+    const active = sp.id === S.settings.activeId;
+    return `<article class="card" role="option" data-id="${esc(sp.id)}" aria-label="${esc(sp.name)}, ${fmt(sp.remaining)} gramos">
+      ${spoolSvg(sp, st.pct, 112)}
+      <h3>${esc(sp.name)}</h3>
+      <p class="sub">${esc(sp.material)}${sp.brand ? " · " + esc(sp.brand) : ""} · ${esc(sp.diameter)} mm</p>
+      <p class="big">${fmt(sp.remaining)} <small>g</small></p>
+      <div class="bar st-${st.key}"><i style="width:${(st.pct * 100).toFixed(1)}%"></i></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+        <span class="chip st-${st.key}">${st.label}</span>
+        ${active ? '<span class="badge">En uso</span>' : ""}${sp.example ? '<span class="badge ghost">Ejemplo</span>' : ""}
+      </div>
+    </article>`;
+  }).join("");
+  $("#dots").innerHTML = list.map(() => "<i></i>").join("");
+  const el = rail.querySelector(`[data-id="${S.sel}"]`);
+  if (el) rail.scrollTo({ left: el.offsetLeft + el.offsetWidth / 2 - rail.clientWidth / 2, behavior: "auto" });
+  updateFocus();
+}
+
+let rafId = 0;
+function updateFocus() {
+  const rail = $("#rail");
+  const cards = [...rail.querySelectorAll(".card")];
+  if (!cards.length) return;
+  const center = rail.scrollLeft + rail.clientWidth / 2;
+  let best = null, bestD = Infinity;
+  cards.forEach((el) => {
+    const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - center);
+    const t = Math.min(1, d / 260);
+    el.style.setProperty("--s", (1 - 0.2 * t).toFixed(3));
+    el.style.setProperty("--o", (1 - 0.5 * t).toFixed(3));
+    if (d < bestD) { bestD = d; best = el; }
+  });
+  cards.forEach((el) => { el.classList.toggle("sel", el === best); el.setAttribute("aria-selected", el === best ? "true" : "false"); });
+  const idx = cards.indexOf(best);
+  [...$("#dots").children].forEach((d, i) => d.classList.toggle("on", i === idx));
+  if (best && best.dataset.id !== S.sel) { S.sel = best.dataset.id; renderDetail(); }
+  $("#railHint").textContent = S.open ? "" : "Desliza para elegir. Toca el carrete para registrar uso.";
+}
+$("#rail").addEventListener("scroll", () => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(updateFocus); }, { passive: true });
+window.addEventListener("resize", () => { const el = $("#rail").querySelector(`[data-id="${S.sel}"]`); if (el) selectSpool(S.sel, { smooth: false }); });
+
+function selectSpool(id, opts = {}) {
+  const rail = $("#rail");
+  const el = rail.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  S.sel = id;
+  rail.scrollTo({ left: el.offsetLeft + el.offsetWidth / 2 - rail.clientWidth / 2, behavior: opts.smooth === false || reduceMotion ? "auto" : "smooth" });
+  renderDetail();
+}
+function stepSpool(dir) {
+  const list = sortedSpools();
+  const i = list.findIndex((s) => s.id === S.sel);
+  const n = list[Math.max(0, Math.min(list.length - 1, i + dir))];
+  if (n) selectSpool(n.id);
+}
+function setOpen(v) {
+  S.open = v && !!byId(S.sel);
+  $("#detail").hidden = !S.open;
+  renderDetail();
+  if (S.open) { $("#detail").scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" }); $("#useG").focus({ preventScroll: true }); }
+  $("#railHint").textContent = S.open ? "" : "Desliza para elegir. Toca el carrete para registrar uso.";
+}
+
+function renderUseCost() {
+  const sp = byId(S.sel);
+  const g = parseFloat($("#useG").value);
+  const k = costPerG(sp);
+  $("#useCost").textContent = k != null && g > 0 ? `Costo de esta impresión: ${money(g * k)}` : (sp && k == null ? "Agrega el precio del carrete para ver el costo de cada impresión." : "");
+}
+
+function renderDetail() {
+  const sp = byId(S.sel);
+  if (!sp || !S.open) return;
+  const st = stateOf(sp);
+  const meters = sp.remaining / gPerM(sp.material, sp.diameter);
+  $("#detHead").innerHTML = `<div><h3 id="detTitle">${esc(sp.name)}</h3>
+    <p class="nums">${esc(sp.material)}${sp.brand ? " · " + esc(sp.brand) : ""} · usado ${fmt(sp.initial - sp.remaining)} g de ${fmt(sp.initial)} g · ≈ ${fmt(meters)} m restantes</p></div>
+    <span class="chip st-${st.key}">${st.label}</span>`;
+  const rw = $("#realW");
+  if (document.activeElement !== rw) rw.value = Math.round(sp.remaining);
+  const rp = $("#realP");
+  if (document.activeElement !== rp) rp.value = sp.price > 0 ? sp.price : "";
+  const isActive = sp.id === S.settings.activeId;
+  $("#activeBtn").hidden = isActive;
+  const del = $("#delBtn");
+  if (del.dataset.for !== sp.id) { del.dataset.for = sp.id; del.dataset.armed = "0"; del.textContent = "Borrar carrete"; }
+  $("#useChips").innerHTML = chipsHtml(S.file, sp, "setUse");
+  renderUseCost();
+}
+
+function renderCheck() {
+  const box = $("#chkResult");
+  const v = parseFloat($("#chkAmt").value);
+  const unit = $("#chkUnit").value;
+  const margin = Math.max(0, parseFloat($("#chkMargin").value) || 0);
+  if (!S.spools.length) { box.innerHTML = `<p class="hint" style="text-align:left">Agrega un carrete para comparar.</p>`; return; }
+  if (!(v > 0)) { box.innerHTML = `<p class="hint" style="text-align:left">Carga un archivo o escribe cuántos ${unit === "g" ? "gramos" : "metros"} necesita el modelo.</p>`; return; }
+  const rows = sortedSpools().map((sp) => {
+    const grams = unit === "g" ? v : v * gPerM(sp.material, sp.diameter);
+    const need = grams * (1 + margin / 100);
+    return { sp, grams, need, diff: sp.remaining - need };
+  }).sort((a, b) => (b.sp.id === S.settings.activeId) - (a.sp.id === S.settings.activeId) || b.diff - a.diff);
+  box.innerHTML = rows.map(({ sp, grams, need, diff }) => {
+    const fits = diff >= 0;
+    const after = sp.initial > 0 ? (sp.remaining - need) / sp.initial : 0;
+    const tight = fits && after <= S.settings.lowPct / 100;
+    const chip = fits ? (tight ? '<span class="chip st-low">Alcanza justo</span>' : '<span class="chip st-ok">Alcanza</span>') : '<span class="chip st-crit">No alcanza</span>';
+    const text = fits ? `Sobran ${fmt(diff)} g${tight ? " (quedará bajo)" : ""}` : `Faltan ${fmt(-diff)} g`;
+    const k = costPerG(sp);
+    return `<div class="res-row" data-id="${esc(sp.id)}">
+      <span class="dot" style="background:${esc(sp.color || "#888")}"></span>
+      <span class="name">${esc(sp.material)} ${esc(spoolName(sp))}</span>
+      ${chip}
+      <span class="detail"><span class="mono">necesita ${fmt(need)} g · tiene ${fmt(sp.remaining)} g</span><span>${text}</span>${k != null ? `<span>costo ≈ ${money(grams * k)}</span>` : ""}
+      ${fits ? `<button class="btn small" type="button" data-act="useThis" data-g="${grams.toFixed(1)}">Imprimir con este</button>` : ""}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderHistory() {
+  const ul = $("#history");
+  $("#histCount").textContent = S.prints.length ? `${S.prints.length} impresiones registradas` : "Aún sin impresiones registradas";
+  if (!S.prints.length) { ul.innerHTML = `<li><span class="empty-li">Cuando registres un uso aparecerá aquí, y podrás deshacerlo si te equivocaste.</span></li>`; return; }
+  const df = new Intl.DateTimeFormat("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  ul.innerHTML = [...S.prints].sort((a, b) => b.at - a.at).slice(0, 50).map((p) =>
+    `<li data-id="${esc(p.id)}">
+      <div class="what"><div>${esc(p.label || "Impresión sin nombre")}</div><div class="when">${esc(p.spoolName)} · ${df.format(new Date(p.at))}${p.cost != null ? " · " + money(p.cost) : ""}</div></div>
+      <span class="mono">−${fmt(p.grams)} g</span>
+      <button class="btn small" type="button" data-act="undo">Deshacer</button>
+    </li>`).join("");
+}
+
+function pendingShop() { return S.shopping.filter((i) => !i.done); }
+function renderShop() {
+  const pend = pendingShop();
+  const sug = sortedSpools().filter((sp) => stateOf(sp).key !== "ok" && !pend.some((i) => i.spoolId === sp.id));
+  $("#shopSug").innerHTML = sug.length ? sug.map((sp) => {
+    const st = stateOf(sp);
+    return `<div class="sug" data-id="${esc(sp.id)}"><div><div>${esc(sp.material)} ${esc(spoolName(sp))}</div><div class="sub">${st.label}: quedan ${fmt(sp.remaining)} g${sp.price > 0 ? " · " + money(sp.price) : ""}</div></div>
+      <button class="btn small" type="button" data-act="shopSuggest">Agregar</button></div>`;
+  }).join("") : `<p class="sub">Ningún carrete está por acabarse.</p>`;
+  const items = [...S.shopping].sort((a, b) => (a.done - b.done) || (a.createdAt || 0) - (b.createdAt || 0));
+  $("#shopList").innerHTML = items.length ? items.map((it) =>
+    `<li data-id="${esc(it.id)}" class="${it.done ? "done" : ""}">
+      <div class="what">${esc(it.text)}${it.price > 0 ? `<div class="when">${money(it.price)}</div>` : ""}</div>
+      <button class="btn small" type="button" data-act="shopToggle">${it.done ? "Deshacer" : "Comprado"}</button>
+      <button class="btn small" type="button" data-act="shopDel" aria-label="Quitar ${esc(it.text)}">Quitar</button>
+    </li>`).join("") : `<li><span class="empty-li">La lista está vacía.</span></li>`;
+  const total = pend.reduce((a, i) => a + (i.price > 0 ? i.price : 0), 0);
+  $("#shopTotal").textContent = total > 0 ? `Total estimado por comprar: ${money(total)}` : "";
+  $("#shopClear").hidden = !S.shopping.some((i) => i.done);
+  $("#shopNav").textContent = pend.length ? `${pend.length} por comprar` + (sug.length ? ` · ${sug.length} sugeridos` : "") : (sug.length ? `${sug.length} sugeridos` : "Qué reponer");
+}
+
+function renderStats() {
+  const p = S.prints;
+  const g = p.reduce((a, x) => a + x.grams, 0);
+  const c = p.reduce((a, x) => a + (x.cost || 0), 0);
+  const stockG = S.spools.reduce((a, s) => a + s.remaining, 0);
+  const stockV = S.spools.reduce((a, s) => { const k = costPerG(s); return a + (k != null ? s.remaining * k : 0); }, 0);
+  const tile = (k, v, s) => `<div class="tile"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ""}</div>`;
+  $("#tiles").innerHTML =
+    tile("En inventario", `${fmt(stockG)} g`, stockV > 0 ? `valor ≈ ${money(stockV)}` : `${S.spools.length} carretes`) +
+    tile("Consumido", `${fmt(g)} g`, `${p.length} impresiones`) +
+    tile("Gastado", c > 0 ? money(c) : "—", c > 0 ? "según el precio de cada carrete" : "agrega precios a tus carretes") +
+    tile("Promedio", p.length ? `${fmt(g / p.length)} g` : "—", p.length && c > 0 ? `${money(c / p.length)} por impresión` : "por impresión");
+  const by = {};
+  p.forEach((x) => { const m = x.material || (byId(x.spoolId) && byId(x.spoolId).material) || "Otro"; by[m] = (by[m] || 0) + x.grams; });
+  const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  const max = rows.length ? rows[0][1] : 1;
+  $("#byMat").innerHTML = rows.length ? rows.map(([m, v]) => `<div class="mrow"><span>${esc(m)}</span><div class="bar"><i style="width:${(v / max * 100).toFixed(1)}%"></i></div><span class="mono">${fmt(v)} g</span></div>`).join("") : `<p class="sub">Aún no hay impresiones registradas.</p>`;
+}
+
+function renderSettings() {
+  const lp = $("#lowPct");
+  if (document.activeElement !== lp) lp.value = S.settings.lowPct;
+  const cs = $("#curSym");
+  if (document.activeElement !== cs) cs.value = cur();
+  const n = S.spools.filter((s) => s.example).length;
+  $("#clrEx").hidden = !n;
+  $("#clrEx").textContent = `Quitar carretes de ejemplo (${n})`;
+  $("#exportRow").hidden = !dl;
+}
+
+function render() {
+  renderTop(); renderRail(); renderDetail(); renderCheck(); renderHistory(); renderShop(); renderStats(); renderSettings();
+  if (S.loaded && !announced && S.spools.length) {
+    announced = true;
+    const lows = S.spools.filter((s) => stateOf(s).key !== "ok").length;
+    if (lows) toast(lows === 1 ? "1 carrete por acabarse" : `${lows} carretes por acabarse`, 4500);
+  }
+}
+
+/* ---------- Menú lateral y formulario ---------- */
+function showView(v) {
+  const titles = { check: "¿Alcanza el modelo?", shop: "Lista de compra", stats: "Resumen", hist: "Historial", set: "Ajustes" };
+  $("#drNav").hidden = !!v;
+  ["check", "shop", "stats", "hist", "set"].forEach((k) => { $("#v-" + k).hidden = k !== v; });
+  $("#drTitle").textContent = v ? titles[v] : "Menú";
+  $("#drBack").hidden = !v;
+}
+function openMenu(view) {
+  $("#scrim").hidden = false;
+  const d = $("#drawer");
+  d.classList.add("open"); d.setAttribute("aria-hidden", "false");
+  $("#menuBtn").setAttribute("aria-expanded", "true");
+  showView(view || null);
+  if (!view) d.querySelector("#drNav button").focus({ preventScroll: true });
+}
+function openForm() {
+  closeAll();
+  $("#scrim").hidden = false;
+  $("#formModal").hidden = false;
+  $("#fName").focus();
+}
+function closeAll() {
+  $("#scrim").hidden = true;
+  $("#formModal").hidden = true;
+  const d = $("#drawer");
+  d.classList.remove("open"); d.setAttribute("aria-hidden", "true");
+  $("#menuBtn").setAttribute("aria-expanded", "false");
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+$("#rail").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") { e.preventDefault(); stepSpool(1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); stepSpool(-1); }
+  else if (e.key === "Enter") { e.preventDefault(); setOpen(!S.open); }
+});
+$("#rail").addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+  if (card.dataset.id === S.sel) setOpen(!S.open);
+  else selectSpool(card.dataset.id);
+});
+$("#drNav").addEventListener("click", (e) => { const b = e.target.closest("[data-view]"); if (b) showView(b.dataset.view); });
+
+/* ---------- Formularios ---------- */
+$("#formModal").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const initial = parseFloat($("#fInit").value);
+  const remRaw = $("#fRem").value;
+  const rem = remRaw === "" ? initial : parseFloat(remRaw);
+  if (!(initial > 0) || !(rem >= 0)) { toast("Revisa los pesos del carrete."); return; }
+  const price = parseFloat($("#fPrice").value);
+  const sp = {
+    id: newId(), name: $("#fName").value.trim(), brand: $("#fBrand").value.trim(), material: $("#fMat").value,
+    diameter: parseFloat($("#fDia").value), initial, remaining: Math.min(rem, initial * 1.2), color: $("#fColor").value, createdAt: Date.now(),
+    price: price > 0 ? price : null,
+  };
+  guard(async () => {
+    await putSpool(sp);
+    if (!S.settings.activeId) await putSettings({ activeId: sp.id });
+    S.sel = sp.id;
+    closeAll(); $("#formModal").reset();
+    toast("Carrete guardado");
+    requestAnimationFrame(() => selectSpool(sp.id));
+  });
+});
+
+$("#useForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const sp = byId(S.sel);
+  const g = parseFloat($("#useG").value);
+  if (!sp || !(g > 0)) { toast("Escribe los gramos usados."); return; }
+  const k = costPerG(sp);
+  guard(async () => {
+    await logUse(sp.id, g, $("#useLabel").value.trim());
+    $("#useG").value = ""; $("#useLabel").value = "";
+    toast(`Descontados ${fmt(g)} g${k != null ? " (" + money(g * k) + ")" : ""}. Quedan ${fmt(Math.max(0, sp.remaining - g))} g.`);
+  });
+});
+$("#useG").addEventListener("input", renderUseCost);
+
+$("#shopForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = $("#shopText").value.trim();
+  if (!text) return;
+  const price = parseFloat($("#shopPrice").value);
+  guard(async () => {
+    await putShop({ id: newId(), text, price: price > 0 ? price : null, spoolId: null, done: false, createdAt: Date.now() });
+    $("#shopForm").reset();
+  });
+});
+
+["#chkAmt", "#chkUnit", "#chkMargin"].forEach((s) => $(s).addEventListener("input", renderCheck));
+$("#chkForm").addEventListener("submit", (e) => e.preventDefault());
+$("#chkFile").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) await loadSlicer(f, "chk"); e.target.value = ""; });
+$("#useFile").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) await loadSlicer(f, "use"); e.target.value = ""; });
+$("#lowPct").addEventListener("change", (e) => {
+  const v = Math.min(60, Math.max(5, parseInt(e.target.value, 10) || 20));
+  e.target.value = v;
+  guard(() => putSettings({ lowPct: v }));
+});
+$("#curSym").addEventListener("change", (e) => {
+  const v = e.target.value.trim().slice(0, 4) || "Q";
+  e.target.value = v;
+  guard(() => putSettings({ currency: v }));
+});
+
+/* ---------- Exportar ---------- */
+async function saveFile(filename, data) {
+  if (!dl) return;
+  try { await dl.save({ filename, data }); toast("Archivo listo"); }
+  catch (e) { if (!e || e.code !== "declined") toast("No se pudo guardar el archivo."); }
+}
+function exportCsv() {
+  const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const rows = [["Fecha", "Carrete", "Material", "Impresión", "Gramos", "Costo"].map(q).join(",")];
+  [...S.prints].sort((a, b) => a.at - b.at).forEach((p) => rows.push([new Date(p.at).toISOString().slice(0, 16).replace("T", " "), p.spoolName, p.material || "", p.label, p.grams, p.cost ?? ""].map(q).join(",")));
+  saveFile("historial-filamento.csv", "﻿" + rows.join("\r\n"));
+}
+function exportJson() {
+  saveFile("copia-filamento.json", JSON.stringify({ exportado: new Date().toISOString(), carretes: S.spools, impresiones: S.prints, compras: S.shopping, ajustes: S.settings }, null, 2));
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-act]");
+  if (!btn) return;
+  const act = btn.dataset.act;
+  const sp = byId(S.sel);
+  if (act === "openForm") return openForm();
+  if (act === "openMenu") return openMenu();
+  if (act === "closeAll") return closeAll();
+  if (act === "menuHome") return showView(null);
+  if (act === "closeDetail") return setOpen(false);
+  if (act === "prev") return stepSpool(-1);
+  if (act === "next") return stepSpool(1);
+  if (act === "examples") return guard(loadExamples);
+  if (act === "clearExamples") return guard(clearExamples);
+  if (act === "exportCsv") return exportCsv();
+  if (act === "exportJson") return exportJson();
+  if (act === "setUse") {
+    const g = parseFloat(btn.dataset.g);
+    if (g > 0) { $("#useG").value = (Math.round(g * 10) / 10).toString(); if (!$("#useLabel").value && S.file) $("#useLabel").value = S.file.name.slice(0, 60); renderUseCost(); }
+    return;
+  }
+  if (act === "setChk") {
+    if (btn.dataset.m) { $("#chkUnit").value = "m"; $("#chkAmt").value = btn.dataset.m; }
+    else { $("#chkUnit").value = "g"; $("#chkAmt").value = btn.dataset.g; }
+    return renderCheck();
+  }
+  if (act === "setActive" && sp) return guard(async () => { await putSettings({ activeId: sp.id }); toast("Ahora usas este carrete"); });
+  if (act === "saveReal" && sp) {
+    const val = parseFloat($("#realW").value);
+    if (!(val >= 0)) { toast("Escribe un peso válido."); return; }
+    return guard(async () => { await putSpool({ ...sp, remaining: val }); toast("Peso actualizado"); });
+  }
+  if (act === "savePrice" && sp) {
+    const val = parseFloat($("#realP").value);
+    return guard(async () => { await putSpool({ ...sp, price: val > 0 ? val : null }); toast(val > 0 ? "Precio guardado" : "Precio quitado"); });
+  }
+  if (act === "delete" && sp) {
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1"; btn.textContent = "¿Seguro? Borrar";
+      setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = "0"; btn.textContent = "Borrar carrete"; } }, 4000);
+      return;
+    }
+    return guard(async () => {
+      await delSpool(sp.id);
+      if (S.settings.activeId === sp.id) await putSettings({ activeId: null });
+      S.open = false; $("#detail").hidden = true; S.sel = null;
+      toast("Carrete borrado");
+    });
+  }
+  if (act === "useThis") {
+    const id = btn.closest("[data-id]").dataset.id;
+    closeAll();
+    selectSpool(id);
+    setOpen(true);
+    $("#useG").value = btn.dataset.g;
+    if (S.file && !$("#useLabel").value) $("#useLabel").value = S.file.name.slice(0, 60);
+    renderUseCost();
+    $("#useLabel").focus();
+    return;
+  }
+  if (act === "undo") {
+    const p = S.prints.find((x) => x.id === btn.closest("[data-id]").dataset.id);
+    if (p) guard(async () => { await undoPrint(p); toast("Uso deshecho"); });
+    return;
+  }
+  if (act === "shopSuggest") {
+    const s = byId(btn.closest("[data-id]").dataset.id);
+    if (s) guard(async () => { await putShop({ id: newId(), text: `Reponer ${s.material} ${spoolName(s)}`, price: s.price > 0 ? s.price : null, spoolId: s.id, done: false, createdAt: Date.now() }); toast("Agregado a la lista"); });
+    return;
+  }
+  if (act === "shopToggle") {
+    const it = S.shopping.find((x) => x.id === btn.closest("[data-id]").dataset.id);
+    if (it) guard(() => putShop({ ...it, done: !it.done }));
+    return;
+  }
+  if (act === "shopDel") { const id = btn.closest("[data-id]").dataset.id; return guard(() => delShop(id)); }
+  if (act === "shopClear") return guard(async () => { for (const it of S.shopping.filter((i) => i.done)) await delShop(it.id); });
+});
+
+/* ---------- Importar copia de seguridad ---------- */
+let pendingImport = null;
+$("#impFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    const spools = j.carretes || j.spools;
+    if (!Array.isArray(spools)) throw new Error("formato");
+    pendingImport = { spools, prints: j.impresiones || j.prints || [], shopping: j.compras || j.shopping || [], settings: j.ajustes || j.settings || {} };
+    $("#impMsg").textContent = `Esto reemplaza los datos de este teléfono por ${spools.length} carretes y ${pendingImport.prints.length} impresiones.`;
+    $("#impConfirm").hidden = false;
+  } catch (err) { toast("Ese archivo no es una copia válida.", 3500); }
+  e.target.value = "";
+});
+$("#impNo").addEventListener("click", () => { pendingImport = null; $("#impConfirm").hidden = true; });
+$("#impYes").addEventListener("click", () => {
+  if (!pendingImport) return;
+  S.spools = pendingImport.spools;
+  S.prints = pendingImport.prints;
+  S.shopping = pendingImport.shopping;
+  Object.assign(S.settings, pendingImport.settings);
+  S.sel = null; S.open = false; $("#detail").hidden = true;
+  pendingImport = null; $("#impConfirm").hidden = true;
+  lsSave(); render();
+  toast("Copia importada");
+});
+
+/* ---------- Arranque ---------- */
+dl = {
+  save: async ({ filename, data }) => {
+    const type = filename.endsWith(".csv") ? "text/csv;charset=utf-8" : "application/json";
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  },
+};
+(function start() {
+  lsLoad(); S.loaded = true; render();
+  $("#status").textContent = "Los datos se guardan solo en este teléfono. Descarga una copia de seguridad de vez en cuando.";
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+CONTROL DE FILAMENTO - APP INSTALABLE PARA ANDROID (CHROME)
+===========================================================
+
+Archivos de este paquete (todos van juntos, en la misma carpeta):
+  index.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png, icon-maskable-512.png
+
+1) PONERLA EN INTERNET GRATIS (GitHub Pages)
+   a. Crea una cuenta en https://github.com (es gratis).
+   b. Arriba a la derecha toca "+" y luego "New repository".
+   c. Nombre: filamento. Déjalo en "Public" y toca "Create repository".
+   d. Toca el enlace "uploading an existing file".
+   e. Descomprime este zip y arrastra los 6 archivos (no el zip) a la página.
+   f. Abajo toca "Commit changes".
+   g. Ve a Settings > Pages. En "Source" elige "Deploy from a branch",
+      en "Branch" elige "main" y la carpeta "/ (root)", y toca Save.
+   h. Espera uno o dos minutos. La dirección será:
+        https://TU-USUARIO.github.io/filamento/
+
+   Nota: el repositorio es público, así que cualquiera podría ver el código de la app.
+   Tus datos NO se suben: se guardan solo en tu teléfono.
+
+2) INSTALARLA EN TU ANDROID
+   a. Abre esa dirección en Chrome.
+   b. Toca el menú de los tres puntos y elige "Instalar app" (o "Añadir a pantalla de inicio").
+   c. Ábrela una vez con internet para que quede guardada. Después funciona sin conexión.
+
+3) PASAR TUS CARRETES DE LA PÁGINA ACTUAL A LA APP
+   a. En la página actual: menú > Ajustes > "Copia de seguridad (JSON)". Guarda el archivo.
+   b. Pásalo a tu teléfono (WhatsApp, correo o Drive).
+   c. En la app instalada: menú > Ajustes > "Importar copia" y elige ese archivo.
+
+4) ACTUALIZAR LA APP MÁS ADELANTE
+   Cuando te envíe archivos nuevos, súbelos al mismo repositorio (Add file > Upload files).
+   La app instalada se actualiza sola la próxima vez que se abra con internet.
+
+5) COPIAS DE SEGURIDAD
+   Los datos viven en el navegador del teléfono. Si borras los datos de Chrome se pierden.
+   Descarga una copia desde Ajustes de vez en cuando.
